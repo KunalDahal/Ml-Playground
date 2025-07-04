@@ -8,7 +8,8 @@ I’ve started with Python basics and will keep adding new topics, notes, and ex
 ## 📚 Topics Covered
 
 - ✅ Python Basics
-- ⬜ (More to come...)
+- ✅ OOP
+- (More to come...)
 
 ---
 
