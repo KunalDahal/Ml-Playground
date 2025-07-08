@@ -10,6 +10,7 @@ I’ve started with Python basics and will keep adding new topics, notes, and ex
 - ✅ Python Basics
 - ✅ OOP
 - ✅ Numpy
+- ✅ Pandas
 - (More to come...)
 
 ---
