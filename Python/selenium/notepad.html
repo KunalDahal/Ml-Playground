@@ -1,0 +1,361 @@
+
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Notes</title>
+    <base target="_self">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@preline/preline@2.0.0/dist/preline.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {"50":"#eff6ff","100":"#dbeafe","200":"#bfdbfe","300":"#93c5fd","400":"#60a5fa","500":"#3b82f6","600":"#2563eb","700":"#1d4ed8","800":"#1e40af","900":"#1e3a8a"}
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .recording {
+            animation: pulse 1.5s infinite;
+        }
+        .note-content {
+            min-height: 300px;
+        }
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: absolute;
+                z-index: 50;
+                height: 100vh;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 h-full">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <div class="sidebar bg-white dark:bg-gray-800 w-64 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h1 class="text-xl font-bold text-gray-800 dark:text-white">Voice Notes</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Your personal voice-enabled notepad</p>
+            </div>
+            
+            <div class="p-4">
+                <button id="newNoteBtn" class="w-full bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                    <i class="fas fa-plus"></i> New Note
+                </button>
+                <button id="toggleRecordBtn" class="w-full mt-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                    <i class="fas fa-microphone"></i> Start Recording
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+                <div class="px-4 py-2">
+                    <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Your Notes</h2>
+                </div>
+                <ul id="notesList" class="space-y-1 px-2">
+                    <!-- Notes will be populated here -->
+                </ul>
+            </div>
+            
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                    <span id="storageStatus">Storage: Local</span>
+                    <button id="toggleDarkMode" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:inline"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile sidebar toggle -->
+        <button id="sidebarToggle" class="md:hidden fixed top-4 left-4 z-40 p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Main content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Toolbar -->
+            <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
+                <div>
+                    <h2 id="currentNoteTitle" class="text-lg font-semibold text-gray-800 dark:text-white">Select or create a note</h2>
+                </div>
+                <div class="flex gap-2">
+                    <button id="saveNoteBtn" class="bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50" disabled>
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button id="deleteNoteBtn" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50" disabled>
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Note editor -->
+            <div class="flex-1 overflow-auto p-4">
+                <div class="max-w-3xl mx-auto">
+                    <input type="text" id="noteTitle" placeholder="Note title" class="w-full text-2xl font-bold bg-transparent border-none focus:ring-0 text-gray-800 dark:text-white placeholder-gray-400 mb-4">
+                    <div id="noteContent" class="note-content bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" contenteditable="true" placeholder="Start typing or use voice recording..."></div>
+                    
+                    <div id="recordingStatus" class="mt-4 hidden items-center gap-2 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <div class="w-3 h-3 rounded-full bg-red-500 recording"></div>
+                        <span class="text-gray-700 dark:text-gray-300">Recording...</span>
+                        <button id="stopRecordingBtn" class="ml-auto text-sm text-primary-600 dark:text-primary-400 hover:underline">Stop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const elements = {
+                sidebar: document.querySelector('.sidebar'),
+                sidebarToggle: document.getElementById('sidebarToggle'),
+                newNoteBtn: document.getElementById('newNoteBtn'),
+                toggleRecordBtn: document.getElementById('toggleRecordBtn'),
+                stopRecordingBtn: document.getElementById('stopRecordingBtn'),
+                recordingStatus: document.getElementById('recordingStatus'),
+                saveNoteBtn: document.getElementById('saveNoteBtn'),
+                deleteNoteBtn: document.getElementById('deleteNoteBtn'),
+                toggleDarkMode: document.getElementById('toggleDarkMode'),
+                notesList: document.getElementById('notesList'),
+                noteTitle: document.getElementById('noteTitle'),
+                noteContent: document.getElementById('noteContent'),
+                currentNoteTitle: document.getElementById('currentNoteTitle'),
+                storageStatus: document.getElementById('storageStatus')
+            };
+
+            // State management
+            let state = {
+                notes: JSON.parse(localStorage.getItem('voice-notes')) || [],
+                currentNoteId: null,
+                isRecording: false,
+                recognition: null
+            };
+
+            // Initialize speech recognition
+            function initSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    console.warn('Speech recognition not supported in this browser');
+                    return;
+                }
+
+                state.recognition = new SpeechRecognition();
+                state.recognition.continuous = true;
+                state.recognition.interimResults = true;
+                state.recognition.lang = 'en-US';
+
+                state.recognition.onresult = function(event) {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+
+                    if (elements.noteContent.textContent.trim() === '') {
+                        elements.noteContent.textContent = transcript;
+                    } else {
+                        elements.noteContent.textContent += ' ' + transcript;
+                    }
+                };
+
+                state.recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    stopRecording();
+                };
+            }
+
+            // Start/stop recording
+            function toggleRecording() {
+                if (state.isRecording) {
+                    stopRecording();
+                } else {
+                    startRecording();
+                }
+            }
+
+            function startRecording() {
+                if (!state.recognition) {
+                    initSpeechRecognition();
+                    if (!state.recognition) {
+                        alert('Speech recognition not available in your browser');
+                        return;
+                    }
+                }
+
+                state.isRecording = true;
+                state.recognition.start();
+                elements.toggleRecordBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> Stop Recording';
+                elements.toggleRecordBtn.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+                elements.toggleRecordBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'text-white');
+                elements.recordingStatus.classList.remove('hidden');
+            }
+
+            function stopRecording() {
+                if (state.recognition) {
+                    state.recognition.stop();
+                }
+                state.isRecording = false;
+                elements.toggleRecordBtn.innerHTML = '<i class="fas fa-microphone"></i> Start Recording';
+                elements.toggleRecordBtn.classList.add('bg-gray-200', 'dark:bg-gray-700');
+                elements.toggleRecordBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'text-white');
+                elements.recordingStatus.classList.add('hidden');
+            }
+
+            // Note management
+            function createNewNote() {
+                state.currentNoteId = Date.now().toString();
+                elements.noteTitle.value = '';
+                elements.noteContent.textContent = '';
+                elements.currentNoteTitle.textContent = 'New note';
+                elements.saveNoteBtn.disabled = false;
+                elements.deleteNoteBtn.disabled = true;
+                elements.noteTitle.focus();
+            }
+
+            function saveNote() {
+                const title = elements.noteTitle.value.trim();
+                const content = elements.noteContent.textContent.trim();
+                
+                if (!title && !content) {
+                    alert('Note cannot be empty');
+                    return;
+                }
+
+                const note = {
+                    id: state.currentNoteId,
+                    title: title || 'Untitled Note',
+                    content: content,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                const existingIndex = state.notes.findIndex(n => n.id === state.currentNoteId);
+                if (existingIndex >= 0) {
+                    state.notes[existingIndex] = note;
+                } else {
+                    state.notes.unshift(note);
+                }
+
+                localStorage.setItem('voice-notes', JSON.stringify(state.notes));
+                renderNotesList();
+                elements.deleteNoteBtn.disabled = false;
+            }
+
+            function deleteNote() {
+                if (!state.currentNoteId) return;
+                
+                if (confirm('Are you sure you want to delete this note?')) {
+                    state.notes = state.notes.filter(note => note.id !== state.currentNoteId);
+                    localStorage.setItem('voice-notes', JSON.stringify(state.notes));
+                    createNewNote();
+                    renderNotesList();
+                }
+            }
+
+            function loadNote(noteId) {
+                const note = state.notes.find(n => n.id === noteId);
+                if (note) {
+                    state.currentNoteId = note.id;
+                    elements.noteTitle.value = note.title;
+                    elements.noteContent.textContent = note.content;
+                    elements.currentNoteTitle.textContent = note.title;
+                    elements.saveNoteBtn.disabled = false;
+                    elements.deleteNoteBtn.disabled = false;
+                }
+            }
+
+            function renderNotesList() {
+                elements.notesList.innerHTML = '';
+                
+                if (state.notes.length === 0) {
+                    elements.notesList.innerHTML = '<li class="text-gray-500 dark:text-gray-400 text-sm p-2">No notes yet</li>';
+                    return;
+                }
+
+                state.notes.forEach(note => {
+                    const li = document.createElement('li');
+                    li.className = `rounded-lg p-2 cursor-pointer ${note.id === state.currentNoteId ? 'bg-primary-100 dark:bg-primary-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center gap-2';
+                    
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-file-alt text-gray-500 dark:text-gray-400';
+                    
+                    const title = document.createElement('span');
+                    title.className = 'truncate text-gray-800 dark:text-gray-200';
+                    title.textContent = note.title;
+                    
+                    div.appendChild(icon);
+                    div.appendChild(title);
+                    li.appendChild(div);
+                    
+                    li.addEventListener('click', () => {
+                        loadNote(note.id);
+                        if (window.innerWidth < 768) {
+                            elements.sidebar.classList.remove('open');
+                        }
+                    });
+                    
+                    elements.notesList.appendChild(li);
+                });
+            }
+
+            // Event listeners
+            elements.sidebarToggle.addEventListener('click', () => {
+                elements.sidebar.classList.toggle('open');
+            });
+
+            elements.newNoteBtn.addEventListener('click', createNewNote);
+            elements.toggleRecordBtn.addEventListener('click', toggleRecording);
+            elements.stopRecordingBtn.addEventListener('click', stopRecording);
+            elements.saveNoteBtn.addEventListener('click', saveNote);
+            elements.deleteNoteBtn.addEventListener('click', deleteNote);
+
+            elements.toggleDarkMode.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+            });
+
+            elements.noteTitle.addEventListener('input', () => {
+                elements.currentNoteTitle.textContent = elements.noteTitle.value || 'Untitled Note';
+            });
+
+            // Check for saved dark mode preference
+            if (localStorage.getItem('darkMode') === 'true' || 
+                (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+
+            // Initialize
+            renderNotesList();
+            createNewNote();
+
+            // Prevent default anchor behavior
+            document.querySelectorAll('a').forEach(anchor => {
+                anchor.addEventListener('click', e => e.preventDefault());
+            });
+        });
+    </script>
+</body>
+</html>
