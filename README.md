@@ -26,7 +26,8 @@ I’ve started with Python basics and will keep adding new topics, notes, and ex
 - ✅ Supervised Learning - Multiple Linear Regression(OLS)
 
 ---
-
+## Projects Doe : 
+- Email Spam detection(Naive Bayes)
 ## ⭐ Updates
 
 I’ll continue expanding this repo with fresh concepts, code snippets, and mini-projects as I explore the ML world.
